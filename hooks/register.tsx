@@ -102,6 +102,9 @@ export const register: Register = on => {
             </Box>
           )
         })}
+        {/* Blank rows keep a short last page as tall as the others. */}
+        {newest.length > ROWS &&
+          Array.from({ length: top + ROWS - Math.min(top + ROWS, newest.length) }, (_, n) => <Text key={`pad:${n}`}> </Text>)}
       </Box>
     )
   })

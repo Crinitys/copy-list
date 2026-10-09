@@ -42,6 +42,7 @@ test('the band shows 5 rows at a time and ▼ pages to older ones', async ($, on
     expect(await ui.find({ type: 'Text', text: /6-7 of 7/ })).toBeDefined()
     expect(await ui.find({ key: 'copy:6' })).toBeDefined()
     expect(await ui.find({ key: 'copy:4' })).toBeUndefined()
+    expect(await ui.find({ type: 'Text', text: /^ $/ })).toBeDefined()
     await ui.press({ key: 'up' })
     expect(await ui.find({ type: 'Text', text: /1-5 of 7/ })).toBeDefined()
     await ui.unmount()
