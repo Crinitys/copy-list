@@ -1,5 +1,13 @@
 {
   "name": "copy-list",
-  "owner": { "name": "Crinitys" },
-  "plugins": [{ "name": "copy-list", "source": "./" }]
+  "description": "Claude Code mods by Crinitys: copy-list, a band above the prompt with copy buttons for the paths and //Next: lines in Claude's replies",
+  "owner": {
+    "name": "Crinitys"
+  },
+  "plugins": [
+    {
+      "name": "copy-list",
+      "source": "./"
+    }
+  ]
 }

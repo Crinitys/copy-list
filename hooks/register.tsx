@@ -7,6 +7,8 @@ import { MAX, extract, merge } from './extract.ts'
 const ROWS = 5
 const clips = atom({ plugin: 'copy-list', key: 'clips' } as const, [])
 const offset = atom({ plugin: 'copy-list', key: 'offset' } as const, 0)
+// A short result line in the band's header, in place of a toast.
+const notice = atom({ plugin: 'copy-list', key: 'notice' } as const, '')
 
 export const register: Register = on => {
   on('turn.complete', async ($, e, next) => {
@@ -33,6 +35,11 @@ export const register: Register = on => {
     const last = Math.max(0, newest.length - ROWS)
     const top = Math.min(await read($, offset), last)
     const scroll = (by: number) => update($, offset, n => Math.max(0, Math.min(last, n + by)))
+    const say = async (text: string) => {
+      await update($, notice, () => text)
+      $.clock.after(2000, () => void update($, notice, n => (n === text ? '' : n)))
+    }
+    const said = await read($, notice)
 
     // A blank row and a rule set the band apart from the transcript above it.
     return (
@@ -48,12 +55,15 @@ export const register: Register = on => {
               {top + 1}-{Math.min(top + ROWS, newest.length)} of {newest.length}/{MAX}
             </Text>
           </Text>
-          {newest.length > ROWS && (
-            <Box>
-              <Button key="up" label="▲" onPress={() => scroll(-1)} />
-              <Button key="down" label="▼" onPress={() => scroll(1)} />
-            </Box>
-          )}
+          <Box>
+            {said !== '' && <Text color={said.startsWith('✓') ? 'success' : 'error'}>{said} </Text>}
+            {newest.length > ROWS && (
+              <Box>
+                <Button key="up" label="▲" onPress={() => scroll(-1)} />
+                <Button key="down" label="▼" onPress={() => scroll(1)} />
+              </Box>
+            )}
+          </Box>
         </Box>
         {newest.slice(top, top + ROWS).map((clip, n) => {
           const i = top + n
@@ -65,7 +75,7 @@ export const register: Register = on => {
                 variant={clip.kind === 'next' ? 'primary' : undefined}
                 onPress={async press => {
                   const done = await $.ui.copy({ text: clip.text, surface: press.surface })
-                  $.ui.toast(done.isCopied ? 'Copied.' : `Copy failed: ${done.reason}`)
+                  await say(done.isCopied ? '✓ Copied' : `✗ Copy failed: ${done.reason}`)
                 }}
               />
               {clip.kind === 'next' ? (
@@ -77,12 +87,12 @@ export const register: Register = on => {
                     // A plugin's submit does not run slash commands, so those only fill the prompt.
                     if (clip.text.startsWith('/')) {
                       const done = await $.prompt.fill({ text: clip.text, mode: 'replace' })
-                      $.ui.toast(done.isFilled ? 'Slash command put in the prompt; press Enter.' : `Prompt fill failed: ${done.refusal ?? 'refused'}`)
+                      await say(done.isFilled ? '✓ In the prompt; press Enter' : `✗ Prompt fill failed: ${done.refusal ?? 'refused'}`)
                       return
                     }
                     await $.prompt.fill({ text: '', mode: 'replace' })
                     void $.prompt.submit({ text: clip.text, asUser: true })
-                    $.ui.toast('Copied and sent.')
+                    await say('✓ Sent')
                   }}
                 />
               ) : (

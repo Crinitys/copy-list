@@ -21,7 +21,8 @@ export function extract(answer: string): Clip[] {
   const paths = new Set<string>()
   for (const m of rest.matchAll(BARE)) paths.add(tidy(m[0]))
   for (const m of rest.matchAll(CODE)) {
-    if (LOOKS_RELATIVE.test(m[1])) paths.add(tidy(m[1]))
+    const code = m[1]
+    if (code && LOOKS_RELATIVE.test(code)) paths.add(tidy(code))
   }
   // Paths first, so the //Next: line ends up newest.
   return [...[...paths].map(text => ({ kind: 'path' as const, text })), ...found]

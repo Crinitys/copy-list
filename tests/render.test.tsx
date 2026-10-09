@@ -1,6 +1,7 @@
 // Run with: claude plugin test <mod folder>
 import { expect, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
+import type { On } from 'claude-code'
 
 const band = {
   hasSurvey: false,
@@ -13,7 +14,7 @@ const band = {
 
 const reply = (answer: string) => ({ answer, reason: 'answer', durationMs: 1, isAborted: false, turnId: 't' }) as const
 
-async function seed($: Engine, on: Parameters<Parameters<typeof test>[1]>[1], answers: string[]) {
+async function seed($: Engine, on: On, answers: string[]) {
   on('turn.complete', (_$, e) => ({ text: e.answer }))
   for (const answer of answers) await $.turn.complete(reply(answer))
 }
@@ -73,9 +74,12 @@ test('▶ copies a Next line, clears the prompt and sends it; a slash command on
   await ui.press({ key: 'fill:1' })
   expect(filled).toEqual(['replace:'])
   expect(sent).toEqual(['run the tests'])
+  expect(await ui.find({ type: 'Text', text: /✓ Sent/ })).toBeDefined()
   await ui.press({ key: 'fill:0' })
   expect(filled).toEqual(['replace:', 'replace:/reload-plugins'])
   expect(sent).toEqual(['run the tests'])
   expect(copied).toEqual(['run the tests', '/reload-plugins'])
+  await ui.press({ key: 'copy:2' })
+  expect(await ui.find({ type: 'Text', text: /✓ Copied/ })).toBeDefined()
   await ui.unmount()
 })
