@@ -4,7 +4,7 @@ import type { Register } from 'claude-code'
 import { MAX, extract, merge } from './extract.ts'
 
 // Rows of clips the band shows at once; ▲ and ▼ scroll the rest.
-const ROWS = 3
+const ROWS = 5
 const clips = atom({ plugin: 'copy-list', key: 'clips' } as const, [])
 const offset = atom({ plugin: 'copy-list', key: 'offset' } as const, 0)
 
