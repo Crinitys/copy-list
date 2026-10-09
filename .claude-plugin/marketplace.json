@@ -1,0 +1,5 @@
+{
+  "name": "copy-list",
+  "owner": { "name": "Crinitys" },
+  "plugins": [{ "name": "copy-list", "source": "./" }]
+}
