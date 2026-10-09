@@ -3,89 +3,95 @@ import type { Register } from 'claude-code'
 
 import { MAX, extract, merge } from './extract.ts'
 
-const PANE = 'copy-list'
-// "COPY LIST" in box-drawing letters, 3 rows.
-const LETTERS: Record<string, string[]> = {
-  C: ['╔═╗', '║  ', '╚═╝'],
-  O: ['╔═╗', '║ ║', '╚═╝'],
-  P: ['╔═╗', '╠═╝', '╩  '],
-  Y: ['╦ ╦', '╚╦╝', ' ╩ '],
-  ' ': ['  ', '  ', '  '],
-  L: ['╦  ', '║  ', '╩═╝'],
-  I: ['╦', '║', '╩'],
-  S: ['╔═╗', '╚═╗', '╚═╝'],
-  T: ['╔╦╗', ' ║ ', ' ╩ '],
-}
-const BANNER = [0, 1, 2].map(row => [...'COPY LIST'].map(c => LETTERS[c][row]).join(''))
+// Rows of clips the band shows at once; ▲ and ▼ scroll the rest.
+const ROWS = 3
 const clips = atom({ plugin: 'copy-list', key: 'clips' } as const, [])
+const offset = atom({ plugin: 'copy-list', key: 'offset' } as const, 0)
 
 export const register: Register = on => {
-  on('session.start', async ($, e, next) => {
-    await $.command.register({
-      name: 'copy-list',
-      description: 'Show the paths and //Next: lines of recent replies with copy buttons',
-    })
-    void $.ui.open({ id: PANE, title: 'copy' })
-
-    return next(e)
-  })
-
-  on('command.run', { command: 'copy-list' }, async $ => {
-    await $.ui.open({ id: PANE, title: 'copy', focus: true })
-
-    return { text: 'copy pane opened.' }
-  })
-
   on('turn.complete', async ($, e, next) => {
     // Main loop only: subagent reports are not what the person reads.
     if (!e.agentId && e.answer) {
       const added = extract(e.answer)
-      if (added.length > 0) await update($, clips, list => merge(list, added))
+      if (added.length > 0) {
+        await update($, clips, list => merge(list, added))
+        await update($, offset, () => 0)
+      }
     }
 
     return next(e)
   })
 
-  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    const { Box, Button, Text } = $.ui.resolve(e)
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const list = await read($, clips)
-    const width = e.props.bodyColumns
+    if (e.props.hasSurvey || list.length === 0) {
+      return next(e)
+    }
 
+    const { Box, Button, Text } = $.ui.resolve(e)
+    const newest = [...list].reverse()
+    const last = Math.max(0, newest.length - ROWS)
+    const top = Math.min(await read($, offset), last)
+    const scroll = (by: number) => update($, offset, n => Math.max(0, Math.min(last, n + by)))
+
+    // A blank row and a rule set the band apart from the transcript above it.
     return (
-      <Box flexDirection="column">
-        {width >= BANNER[0].length ? (
-          BANNER.map((line, i) => (
-            <Text key={`banner:${i}`} color="claude" bold>
-              {line}
-            </Text>
-          ))
-        ) : (
-          <Text color="claude" bold>
-            COPY LIST
-          </Text>
-        )}
+      <Box flexDirection="column" marginTop={1}>
+        <Text dimColor>{'─'.repeat(Math.max(1, e.props.bodyColumns))}</Text>
         <Box justifyContent="space-between">
-          <Text dimColor>paths · //Next:</Text>
-          <Text dimColor>
-            {list.length}/{MAX}
+          <Text>
+            <Text color="claude" bold>
+              ⧉ COPY LIST
+            </Text>
+            <Text dimColor>
+              {' '}
+              {top + 1}-{Math.min(top + ROWS, newest.length)} of {newest.length}/{MAX}
+            </Text>
           </Text>
+          {newest.length > ROWS && (
+            <Box>
+              <Button key="up" label="▲" onPress={() => scroll(-1)} />
+              <Button key="down" label="▼" onPress={() => scroll(1)} />
+            </Box>
+          )}
         </Box>
-        <Text dimColor>{'─'.repeat(Math.max(1, width))}</Text>
-        {list.length === 0 && <Text dimColor>No paths or //Next: lines yet.</Text>}
-        {[...list].reverse().map((clip, i) => (
-          <Box key={`row:${i}`}>
-            <Button
-              key={`copy:${i}`}
-              label={clip.kind === 'next' ? 'Next' : 'Path'}
-              variant={clip.kind === 'next' ? 'primary' : undefined}
-              onPress={async press => {
-                const done = await $.ui.copy({ text: clip.text, surface: press.surface })
-                $.ui.toast(done.isCopied ? 'Copied.' : `Copy failed: ${done.reason}`)
-              }}
-            />
-            <Text wrap="truncate-end"> {clip.text.replace(/\s*\n\s*/g, ' ⏎ ')}</Text>
-          </Box>
-        ))}
+        {newest.slice(top, top + ROWS).map((clip, n) => {
+          const i = top + n
+          return (
+            <Box key={`row:${i}`}>
+              <Button
+                key={`copy:${i}`}
+                label={clip.kind === 'next' ? 'Next' : 'Path'}
+                variant={clip.kind === 'next' ? 'primary' : undefined}
+                onPress={async press => {
+                  const done = await $.ui.copy({ text: clip.text, surface: press.surface })
+                  $.ui.toast(done.isCopied ? 'Copied.' : `Copy failed: ${done.reason}`)
+                }}
+              />
+              {clip.kind === 'next' ? (
+                <Button
+                  key={`fill:${i}`}
+                  label="▶"
+                  onPress={async press => {
+                    await $.ui.copy({ text: clip.text, surface: press.surface })
+                    // A plugin's submit does not run slash commands, so those only fill the prompt.
+                    if (clip.text.startsWith('/')) {
+                      const done = await $.prompt.fill({ text: clip.text, mode: 'replace' })
+                      $.ui.toast(done.isFilled ? 'Slash command put in the prompt; press Enter.' : `Prompt fill failed: ${done.refusal ?? 'refused'}`)
+                      return
+                    }
+                    await $.prompt.fill({ text: '', mode: 'replace' })
+                    void $.prompt.submit({ text: clip.text, asUser: true })
+                    $.ui.toast('Copied and sent.')
+                  }}
+                />
+              ) : (
+                <Text>{'     '}</Text>
+              )}
+              <Text wrap="truncate-end"> {clip.text.replace(/\s*\n\s*/g, ' ⏎ ')}</Text>
+            </Box>
+          )
+        })}
       </Box>
     )
   })
