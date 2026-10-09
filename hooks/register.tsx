@@ -1,9 +1,22 @@
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
-import { extract, merge } from './extract.ts'
+import { MAX, extract, merge } from './extract.ts'
 
 const PANE = 'copy-list'
+// "COPY LIST" in box-drawing letters, 3 rows.
+const LETTERS: Record<string, string[]> = {
+  C: ['╔═╗', '║  ', '╚═╝'],
+  O: ['╔═╗', '║ ║', '╚═╝'],
+  P: ['╔═╗', '╠═╝', '╩  '],
+  Y: ['╦ ╦', '╚╦╝', ' ╩ '],
+  ' ': ['  ', '  ', '  '],
+  L: ['╦  ', '║  ', '╩═╝'],
+  I: ['╦', '║', '╩'],
+  S: ['╔═╗', '╚═╗', '╚═╝'],
+  T: ['╔╦╗', ' ║ ', ' ╩ '],
+}
+const BANNER = [0, 1, 2].map(row => [...'COPY LIST'].map(c => LETTERS[c][row]).join(''))
 const clips = atom({ plugin: 'copy-list', key: 'clips' } as const, [])
 
 export const register: Register = on => {
@@ -36,15 +49,35 @@ export const register: Register = on => {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Button, Text } = $.ui.resolve(e)
     const list = await read($, clips)
+    const width = e.props.bodyColumns
 
     return (
       <Box flexDirection="column">
+        {width >= BANNER[0].length ? (
+          BANNER.map((line, i) => (
+            <Text key={`banner:${i}`} color="claude" bold>
+              {line}
+            </Text>
+          ))
+        ) : (
+          <Text color="claude" bold>
+            COPY LIST
+          </Text>
+        )}
+        <Box justifyContent="space-between">
+          <Text dimColor>paths · //Next:</Text>
+          <Text dimColor>
+            {list.length}/{MAX}
+          </Text>
+        </Box>
+        <Text dimColor>{'─'.repeat(Math.max(1, width))}</Text>
         {list.length === 0 && <Text dimColor>No paths or //Next: lines yet.</Text>}
         {[...list].reverse().map((clip, i) => (
           <Box key={`row:${i}`}>
             <Button
               key={`copy:${i}`}
               label={clip.kind === 'next' ? 'Next' : 'Path'}
+              variant={clip.kind === 'next' ? 'primary' : undefined}
               onPress={async press => {
                 const done = await $.ui.copy({ text: clip.text, surface: press.surface })
                 $.ui.toast(done.isCopied ? 'Copied.' : `Copy failed: ${done.reason}`)

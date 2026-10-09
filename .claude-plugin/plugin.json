@@ -1,6 +1,6 @@
 {
   "name": "copy-list",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A pane that lists the paths and //Next: lines from Claude's replies, newest 10, each with a copy button",
   "author": { "name": "Crinitys" },
   "repository": "https://github.com/Crinitys/copy-list",
