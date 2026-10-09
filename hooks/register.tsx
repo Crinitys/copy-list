@@ -3,7 +3,7 @@ import type { Register } from 'claude-code'
 
 import { MAX, extract, merge } from './extract.ts'
 
-// Rows of clips the band shows at once; ▲ and ▼ scroll the rest.
+// Rows of clips the band shows at once; ▲ and ▼ page through the rest.
 const ROWS = 5
 const clips = atom({ plugin: 'copy-list', key: 'clips' } as const, [])
 const offset = atom({ plugin: 'copy-list', key: 'offset' } as const, 0)
@@ -32,7 +32,7 @@ export const register: Register = on => {
 
     const { Box, Button, Text } = $.ui.resolve(e)
     const newest = [...list].reverse()
-    const last = Math.max(0, newest.length - ROWS)
+    const last = Math.max(0, Math.floor((newest.length - 1) / ROWS) * ROWS)
     const top = Math.min(await read($, offset), last)
     const scroll = (by: number) => update($, offset, n => Math.max(0, Math.min(last, n + by)))
     const say = async (text: string) => {
@@ -59,8 +59,8 @@ export const register: Register = on => {
             {said !== '' && <Text color={said.startsWith('✓') ? 'success' : 'error'}>{said} </Text>}
             {newest.length > ROWS && (
               <Box>
-                <Button key="up" label="▲" onPress={() => scroll(-1)} />
-                <Button key="down" label="▼" onPress={() => scroll(1)} />
+                <Button key="up" label="▲" onPress={() => scroll(-ROWS)} />
+                <Button key="down" label="▼" onPress={() => scroll(ROWS)} />
               </Box>
             )}
           </Box>

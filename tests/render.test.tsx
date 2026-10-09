@@ -31,7 +31,7 @@ test('the band draws nothing until a reply has something to copy', async ($, on)
   }
 })
 
-test('the band shows 5 rows at a time and ▼ scrolls to older ones', async ($, on) => {
+test('the band shows 5 rows at a time and ▼ pages to older ones', async ($, on) => {
   await seed($, on, ['`/c/a1` `/c/a2` `/c/a3` `/c/a4` `/c/a5` `/c/a6` `/c/a7`'])
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ plugin: 'copy-list', surface, component: 'AbovePrompt', props: band })
@@ -39,11 +39,11 @@ test('the band shows 5 rows at a time and ▼ scrolls to older ones', async ($, 
     expect(await ui.find({ key: 'copy:5' })).toBeUndefined()
     await ui.press({ key: 'down' })
     await ui.press({ key: 'down' })
-    await ui.press({ key: 'down' })
-    expect(await ui.find({ type: 'Text', text: /3-7 of 7/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /6-7 of 7/ })).toBeDefined()
     expect(await ui.find({ key: 'copy:6' })).toBeDefined()
+    expect(await ui.find({ key: 'copy:4' })).toBeUndefined()
     await ui.press({ key: 'up' })
-    await ui.press({ key: 'up' })
+    expect(await ui.find({ type: 'Text', text: /1-5 of 7/ })).toBeDefined()
     await ui.unmount()
   }
 })
