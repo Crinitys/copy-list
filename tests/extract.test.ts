@@ -27,6 +27,10 @@ describe('extract', () => {
   test('a reply with nothing to copy gives nothing', () => {
     expect(extract('Done. `npm test` passed.')).toEqual([])
   })
+
+  test('a URL is not a path', () => {
+    expect(extract('See https://github.com/c/repo and http://a.io/b/c.')).toEqual([])
+  })
 })
 
 describe('merge', () => {

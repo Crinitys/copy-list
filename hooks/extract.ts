@@ -5,7 +5,8 @@ export const MAX = 10
 // The body of each fenced block that follows a //Next: label.
 const NEXT = /\/\/Next:\s*\n\s*```[^\n]*\n([\s\S]*?)\n\s*```/g
 // Absolute Windows paths, ~/ paths and /x/ Git Bash paths.
-const BARE = /(?:[A-Za-z]:[\\/]|~[\\/]|\/[a-z]\/)[^\s`'"<>|*?()\[\]]+/g
+// The lookbehind skips URLs: "s:/" in "https://" and "/x/" inside a URL path.
+const BARE = /(?<![\w/])(?:[A-Za-z]:[\\/]|~[\\/]|\/[a-z]\/)[^\s`'"<>|*?()\[\]]+/g
 // Inline code that looks like a relative path: has a slash and an extension or a trailing slash.
 const CODE = /`([^`\s]+)`/g
 const LOOKS_RELATIVE = /^\.{0,2}[\w.-]+(?:[\\/][\w.@-]+)+(?:\.\w+(?::\d+)?|[\\/])$/
