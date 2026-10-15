@@ -6,9 +6,12 @@ export const MAX = 10
 const NEXT = /\/\/Next:\s*\n\s*```[^\n]*\n([\s\S]*?)\n\s*```/g
 // Absolute Windows paths, ~/ paths and /x/ Git Bash paths.
 // The lookbehind skips URLs: "s:/" in "https://" and "/x/" inside a URL path.
-const BARE = /(?<![\w/])(?:[A-Za-z]:[\\/]|~[\\/]|\/[a-z]\/)[^\s`'"<>|*?()\[\]]+/g
+// "(?!\/)" skips a bare "s://": a drive path never starts with "X://".
+const BARE = /(?<![\w/])(?:[A-Za-z]:[\\/](?!\/)|~[\\/]|\/[a-z]\/)[^\s`'"<>|*?()\[\]]+/g
 // Inline code that looks like a relative path: has a slash and an extension or a trailing slash.
 const CODE = /`([^`\s]+)`/g
+// http(s) URLs. ASCII only, so a Korean particle after the URL stays out.
+const LINK = /\bhttps?:\/\/[\w\-.~:/?#@!$&*+,;=%]+/g
 const LOOKS_RELATIVE = /^\.{0,2}[\w.-]+(?:[\\/][\w.@-]+)+(?:\.\w+(?::\d+)?|[\\/])$/
 
 const tidy = (s: string) => s.replace(/[.,;:)\]]+$/, '')
@@ -25,8 +28,14 @@ export function extract(answer: string): Clip[] {
     const code = m[1]
     if (code && LOOKS_RELATIVE.test(code)) paths.add(tidy(code))
   }
-  // Paths first, so the //Next: line ends up newest.
-  return [...[...paths].map(text => ({ kind: 'path' as const, text })), ...found]
+  const links = new Set<string>()
+  for (const m of rest.matchAll(LINK)) links.add(tidy(m[0]))
+  // Paths and URLs first, so the //Next: line ends up newest.
+  return [
+    ...[...paths].map(text => ({ kind: 'path' as const, text })),
+    ...[...links].map(text => ({ kind: 'url' as const, text })),
+    ...found,
+  ]
 }
 
 /** Appends new clips, moves repeats to the end, keeps the newest MAX. */

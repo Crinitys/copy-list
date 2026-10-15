@@ -28,8 +28,12 @@ describe('extract', () => {
     expect(extract('Done. `npm test` passed.')).toEqual([])
   })
 
-  test('a URL is not a path', () => {
-    expect(extract('See https://github.com/c/repo and http://a.io/b/c.')).toEqual([])
+  test('a URL is a url clip, not a path', () => {
+    expect(extract('See https://github.com/c/repo예요 and http://a.io/b/c?x=1.')).toEqual([
+      { kind: 'url', text: 'https://github.com/c/repo' },
+      { kind: 'url', text: 'http://a.io/b/c?x=1' },
+    ])
+    expect(extract('A line that starts with `s://` is wrong.')).toEqual([])
   })
 })
 

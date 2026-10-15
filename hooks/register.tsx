@@ -71,7 +71,7 @@ export const register: Register = on => {
             <Box key={`row:${i}`}>
               <Button
                 key={`copy:${i}`}
-                label={clip.kind === 'next' ? 'Next' : 'Path'}
+                label={clip.kind === 'next' ? 'Next' : clip.kind === 'url' ? 'URL' : 'Path'}
                 variant={clip.kind === 'next' ? 'primary' : undefined}
                 onPress={async press => {
                   const done = await $.ui.copy({ text: clip.text, surface: press.surface })
@@ -96,7 +96,8 @@ export const register: Register = on => {
                   }}
                 />
               ) : (
-                <Text>{'     '}</Text>
+                // 'URL' is one cell shorter than 'Path' and 'Next', so its row pads one more.
+                <Text>{clip.kind === 'url' ? '      ' : '     '}</Text>
               )}
               <Text wrap="truncate-end"> {clip.text.replace(/\s*\n\s*/g, ' ⏎ ')}</Text>
             </Box>

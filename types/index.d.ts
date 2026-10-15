@@ -1,4 +1,4 @@
-export type Clip = { kind: 'path' | 'next'; text: string }
+export type Clip = { kind: 'path' | 'url' | 'next'; text: string }
 
 declare module 'claude-code' {
   interface PluginState {
